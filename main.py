@@ -9,14 +9,6 @@ bot = telebot.TeleBot('6687870375:AAETInBz2DPYABkopwZbvZF0WEPLfxwHzg8')
 user_info = {}
 
 
-@bot.callback_query_handler(func=lambda call: True)
-def callback_worker(call):
-    if call.data == "yes":
-        bot.send_message(call.message.chat.id, 'Запомню : )');
-    elif call.data == "no":
-        pass
-
-
 @bot.message_handler(commands=['start'])
 def handle_start(message):
     msg = bot.send_message(message.chat.id, '''Привет! Это ФиПЛ-бот.

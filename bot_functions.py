@@ -26,7 +26,3 @@ def show_timetable(df, user_info, period):
             message += '\n'
     message += '\n'
     return message
-
-
-def show_materials():
-    pass
