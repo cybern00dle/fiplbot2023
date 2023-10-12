@@ -50,7 +50,12 @@ def handle_options(message):
     elif response == 'майноры':
         bot.register_next_step_handler(message, handle_minors)
     elif response == 'формулы оценки':
-        pass
+        form_markup = telebot.types.ReplyKeyboardMarkup(True, True)
+        form_markup.row('Теория языка', 'НИС "Тестирование и экспертиза в лингвистических исследованиях"')
+        form_markup.row('Технологии разработки баз данных', 'Практикум по разработке лингвистических систем')
+        form_markup.row('НИС "Анализ и синтез звучащей речи"', 'Психолингвистика')
+        msg = bot.send_message(message.chat.id, 'Какой предмет тебе нужен?', reply_markup=form_markup)
+        bot.register_next_step_handler(msg, handle_formulas)
     elif response == 'дедлайны':
         pass
     elif response == 'оценить бота':
@@ -90,7 +95,8 @@ def handle_minors(message):
 
 
 def handle_formulas(message):
-
+    form = formulas[formulas['Дисциплины'] == message.text]['Формулы оценивания'].squeeze()
+    bot.send_message(message.chat.id, f'Вот формула:\n{form}')
 
 
 bot.polling(none_stop=True)
