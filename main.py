@@ -7,6 +7,7 @@ from fipl_data import formulas, materials, minors, students, timetable
 bot = telebot.TeleBot('6687870375:AAETInBz2DPYABkopwZbvZF0WEPLfxwHzg8')
 
 user_info = {}
+user_id = ''
 days = ['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота']
 
 
@@ -49,7 +50,9 @@ def handle_options(message):
         msg = bot.send_message(message.chat.id, 'Какой предмет тебе нужен?', reply_markup=mat_markup)
         bot.register_next_step_handler(msg, handle_materials)
     elif response == 'майноры':
-        bot.register_next_step_handler(message, handle_minors)
+        minor_row = minors[minors['ФИО'].str.lower() == user_info['name']]
+        link = minor_row['Ссылка на майнор'].squeeze()
+        bot.send_message(message.chat.id, f'Вот твоя ссылка:\n{link}')
     elif response == 'формулы оценки':
         form_markup = telebot.types.ReplyKeyboardMarkup(True, True)
         form_markup.row('Теория языка', 'НИС "Тестирование и экспертиза в лингвистических исследованиях"')
@@ -94,12 +97,6 @@ def handle_materials(message):
         bot.send_message(message.chat.id, f'Вот ссылка:\n{mats}')
     else:
         bot.send_message(message.chat.id, 'Таких материалов у меня нет.')
-
-
-def handle_minors(message):
-    minor_row = minors[minors['ФИО'].str.lower() == user_info['name']]
-    link = minor_row['Ссылка на майнор'].squeeze()
-    bot.send_message(message.chat.id, f'Вот твоя ссылка:\n{link}')
 
 
 def handle_formulas(message):
