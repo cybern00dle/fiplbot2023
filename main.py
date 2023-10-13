@@ -72,8 +72,7 @@ def handle_timetable(message):
     elif message.text.lower().strip() == 'неделя':
         resp = ''
         for day in days:
-            day_resp = show_timetable(timetable, user_info, day)
-            resp += day_resp
+            resp += show_timetable(timetable, user_info, day)
         bot.send_message(message.chat.id, resp)
     else:
         bot.send_message(message.chat.id, 'Я не могу показать расписание. Период введён неправильно.')
