@@ -7,6 +7,7 @@ from fipl_data import formulas, materials, minors, students, timetable
 bot = telebot.TeleBot('6687870375:AAETInBz2DPYABkopwZbvZF0WEPLfxwHzg8')
 
 user_info = {}
+days = ['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота']
 
 
 @bot.message_handler(commands=['start'])
@@ -65,27 +66,35 @@ def handle_options(message):
 
 
 def handle_timetable(message):
-    if message.text == 'День':
+    if message.text.lower().strip() == 'день':
         msg = bot.send_message(message.chat.id, 'Какой день недели тебе нужен?')
         bot.register_next_step_handler(msg, handle_time_day)
-    else:
-        days = ['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота']
+    elif message.text.lower().strip() == 'неделя':
         resp = ''
         for day in days:
             day_resp = show_timetable(timetable, user_info, day)
             resp += day_resp
         bot.send_message(message.chat.id, resp)
+    else:
+        bot.send_message(message.chat.id, 'Я не могу показать расписание. Период введён неправильно.')
 
 
 def handle_time_day(message):
     day = message.text.lower().strip()
-    resp = show_timetable(timetable, user_info, day)
-    bot.send_message(message.chat.id, resp)
+    if day in days:
+        resp = show_timetable(timetable, user_info, day)
+        bot.send_message(message.chat.id, resp)
+    else:
+        bot.send_message(message.chat.id, 'Я не могу показать расписание на этот день.')
 
 
 def handle_materials(message):
-    mats = materials[materials['Дисциплина'] == message.text]['Ссылка на материалы'].squeeze()
-    bot.send_message(message.chat.id, f'Вот ссылка:\n{mats}')
+    if materials['Дисциплина'].str.lower().isin([message.text.lower().strip()]).any():
+        mats = materials[materials['Дисциплина'].str.lower() == message.text.lower().strip()][
+            'Ссылка на материалы'].squeeze()
+        bot.send_message(message.chat.id, f'Вот ссылка:\n{mats}')
+    else:
+        bot.send_message(message.chat.id, 'Таких материалов у меня нет.')
 
 
 def handle_minors(message):
@@ -95,8 +104,12 @@ def handle_minors(message):
 
 
 def handle_formulas(message):
-    form = formulas[formulas['Дисциплины'] == message.text]['Формулы оценивания'].squeeze()
-    bot.send_message(message.chat.id, f'Вот формула:\n{form}')
+    if formulas['Дисциплины'].str.lower().isin([message.text.lower().strip()]).any():
+        form = formulas[formulas['Дисциплины'].str.lower() == message.text.lower().strip()][
+            'Формулы оценивания'].squeeze()
+        bot.send_message(message.chat.id, f'Вот формула:\n{form}')
+    else:
+        bot.send_message(message.chat.id, 'Такой формулы у меня нет.')
 
 
 bot.polling(none_stop=True)
