@@ -2,13 +2,14 @@ import pandas as pd
 import telebot
 
 from bot_functions import read_user_info, show_timetable
-from fipl_data import formulas, materials, minors, students, timetable
+from fipl_data import formulas, materials, minors, reviews, students, timetable
 
 bot = telebot.TeleBot('6687870375:AAETInBz2DPYABkopwZbvZF0WEPLfxwHzg8')
 
 user_info = {}
 user_id = ''
 days = ['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота']
+review = {}
 
 
 @bot.message_handler(commands=['start'])
@@ -62,7 +63,11 @@ def handle_options(message):
     elif response == 'дедлайны':
         pass
     elif response == 'оценить бота':
-        pass
+        ev_markup = telebot.types.ReplyKeyboardMarkup(True, True)
+        ev_markup.row('1', '2', '3', '4', '5')
+        msg = bot.send_message(message.chat.id, 'Оцени работу бота по шкале от 1 до 5, пожалуйста.',
+                               reply_markup=ev_markup)
+        bot.register_next_step_handler(msg, handle_mark)
     else:
         bot.send_message(message.chat.id, 'Я не понимаю твой запрос, попробуй ещё раз.')
 
@@ -105,6 +110,24 @@ def handle_formulas(message):
         bot.send_message(message.chat.id, f'Вот формула:\n{form}')
     else:
         bot.send_message(message.chat.id, 'Такой формулы у меня нет.')
+
+
+def handle_mark(message):
+    if message.text.strip() in ['1', '2', '3', '4', '5']:
+        review['mark'] = message.text.strip()
+        msg = bot.send_message(message.chat.id, '''Спасибо за оценку!
+Пожалуйста, напиши отзыв о работе бота.''')
+        bot.register_next_step_handler(msg, handle_review)
+    else:
+        bot.send_message(message.chat.id, 'Эта оценка находится вне шкалы.')
+
+
+def handle_review(message):
+    bot.send_message(message.chat.id, '''Спасибо за отзыв!
+Команда ФиПЛ-бота учтёт твои пожелания в будущем.''')
+    review['review'] = message.text
+    reviews.loc[len(reviews.index)] = [review['mark'], review['review']]
+    reviews.to_csv('reviews.csv', sep=';', index=False)
 
 
 bot.polling(none_stop=True)
