@@ -1,6 +1,13 @@
+import datetime
+import httplib2
+import locale
 import pandas as pd
+import time
 
-from fipl_data import formulas, materials, minors, students, timetable
+from apiclient import discovery
+from oauth2client.service_account import ServiceAccountCredentials
+
+from fipl_data import formulas, materials, minors, students, timetable, client_secret
 
 
 def register_user(df, user_id, user_name):
@@ -34,5 +41,53 @@ def show_timetable(df, user_info, period):
             info = ', '.join([disc, time, corp, au])
             message += info
             message += '\n'
+    if message == f'\n{period.upper()}\n':
+        message += 'Нет занятий'
     message += '\n'
     return message
+
+
+def get_deadlines(period):
+    credentials = ServiceAccountCredentials.from_json_keyfile_name(
+        client_secret, 'https://www.googleapis.com/auth/calendar.readonly')
+    http = credentials.authorize(httplib2.Http())
+    service = discovery.build('calendar', 'v3', http=http)
+
+    locale.setlocale(locale.LC_TIME, 'ru_RU')
+
+    now = datetime.datetime.utcnow().isoformat() + 'Z'
+    now_day = round(time.time()) + 86400
+    now_day = datetime.datetime.fromtimestamp(now_day).isoformat() + 'Z'
+    now_week = round(time.time()) + 604800
+    now_week = datetime.datetime.fromtimestamp(now_week).isoformat() + 'Z'
+
+    if period == 'day':
+        events_result = service.events().list(
+            calendarId='tegzestkij@gmail.com', timeMin=now, timeMax=now_day,
+            maxResults=100, singleEvents=True,
+            orderBy='startTime').execute()
+        deadlines = events_result.get('items', [])
+    else:
+        events_result = service.events().list(
+            calendarId='tegzestkij@gmail.com', timeMin=now, timeMax=now_week,
+            maxResults=100, singleEvents=True,
+            orderBy='startTime').execute()
+        deadlines = events_result.get('items', [])
+
+    if not deadlines:
+        return 'Нет событий на заданный период.'
+    else:
+        msg = 'События на заданный период:\n\n'
+        for deadline in deadlines:
+            try:
+                dd_desc = deadline['description']
+            except KeyError:
+                dd_desc = 'Нет описания.'
+
+            dd_title = deadline['summary']
+            dd_start_gen = deadline['start'].get('dateTime')
+            dd_dt = datetime.datetime.strptime(dd_start_gen, '%Y-%m-%dT%H:%M:%S+03:00')
+            dd_start = dd_dt.strftime('%A, htt1%d %b %Y, %H:%M')
+
+            msg += f'{dd_title}\n{dd_start}\n{dd_desc}\n\n'
+        return msg

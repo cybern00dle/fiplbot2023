@@ -7,3 +7,5 @@ students = pd.read_csv('students.csv', sep=';')
 timetable = pd.read_csv('timetable.csv', sep=';')
 reviews = pd.read_csv('reviews.csv', sep=';')
 users = pd.read_csv('users.csv', sep=';')
+
+client_secret = 'client_secret.json'

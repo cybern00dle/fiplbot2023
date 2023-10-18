@@ -1,7 +1,8 @@
+import atexit
 import pandas as pd
 import telebot
 
-from bot_functions import authorize_user, read_user_info, register_user, show_timetable
+from bot_functions import authorize_user, get_deadlines, read_user_info, register_user, show_timetable
 from fipl_data import formulas, materials, minors, users, reviews, students, timetable
 
 bot = telebot.TeleBot('6687870375:AAETInBz2DPYABkopwZbvZF0WEPLfxwHzg8')
@@ -28,6 +29,7 @@ def handle_name(message):
     fio = message.text.lower().strip()
     if students['ФИО'].str.lower().isin([fio]).any():
         user_info['name'] = fio
+        user_info['user_id'] = message.chat.id
         register_user(users, message.chat.id, user_info['name'])
         read_user_info(students, user_info)
         msg = bot.send_message(message.chat.id, 'Спасибо! Какая информация тебе нужна?', reply_markup=user_markup)
@@ -40,15 +42,18 @@ def handle_name(message):
 @bot.message_handler(content_types=['text'])
 def handle_options(message):
     if not user_info:
+        user_info['user_id'] = message.chat.id
         user_info['name'] = authorize_user(users, message.chat.id)
         read_user_info(students, user_info)
 
     response = message.text.lower().strip()
+
     if response == 'расписание':
         time_markup = telebot.types.ReplyKeyboardMarkup(True, True)
         time_markup.row('День', 'Неделя')
         msg = bot.send_message(message.chat.id, 'На какой период тебе нужно расписание?', reply_markup=time_markup)
         bot.register_next_step_handler(msg, handle_timetable)
+
     elif response == 'учебные материалы':
         mat_markup = telebot.types.ReplyKeyboardMarkup(True, True)
         mat_markup.row('Теория языка 2 курс', 'Теория языка 3 курс')
@@ -57,9 +62,11 @@ def handle_options(message):
         mat_markup.row('Технологии разработки баз данных')
         msg = bot.send_message(message.chat.id, 'Какой предмет тебе нужен?', reply_markup=mat_markup)
         bot.register_next_step_handler(msg, handle_materials)
+
     elif response == 'майноры':
         link = minors[minors['ФИО'].str.lower() == user_info['name']]['Ссылка на майнор'].squeeze()
         bot.send_message(message.chat.id, f'Вот твоя ссылка:\n{link}')
+
     elif response == 'формулы оценки':
         form_markup = telebot.types.ReplyKeyboardMarkup(True, True)
         form_markup.row('Теория языка', 'НИС "Тестирование и экспертиза в лингвистических исследованиях"')
@@ -67,15 +74,24 @@ def handle_options(message):
         form_markup.row('НИС "Анализ и синтез звучащей речи"', 'Психолингвистика')
         msg = bot.send_message(message.chat.id, 'Какой предмет тебе нужен?', reply_markup=form_markup)
         bot.register_next_step_handler(msg, handle_formulas)
+
     elif response == 'дедлайны':
-        msg = bot.send_message(message.chat.id, 'Эта опция пока находится в разработке :)')
-        bot.register_next_step_handler(msg, handle_options)
+        dd_markup = telebot.types.ReplyKeyboardMarkup(True, True)
+        dd_markup.row('Ближайший день')
+        dd_markup.row('Ближайшая неделя')
+        msg = bot.send_message(message.chat.id, 'На какой период тебе нужны дедлайны?', reply_markup=dd_markup)
+        bot.register_next_step_handler(msg, handle_deadlines)
+
     elif response == 'оценить бота':
         ev_markup = telebot.types.ReplyKeyboardMarkup(True, True)
         ev_markup.row('1', '2', '3', '4', '5')
         msg = bot.send_message(message.chat.id, 'Оцени работу бота по шкале от 1 до 5, пожалуйста.',
                                reply_markup=ev_markup)
         bot.register_next_step_handler(msg, handle_mark)
+
+    elif response == '/start':
+        handle_start(message)
+
     else:
         msg = bot.send_message(message.chat.id, 'Я не понимаю твой запрос, попробуй ещё раз.')
         bot.register_next_step_handler(msg, handle_options)
@@ -125,6 +141,18 @@ def handle_formulas(message):
         bot.register_next_step_handler(msg, handle_formulas)
 
 
+def handle_deadlines(message):
+    if message.text.lower().strip() == 'ближайший день':
+        resp = get_deadlines('day')
+        bot.send_message(message.chat.id, resp, reply_markup=user_markup)
+    elif message.text.lower().strip() == 'ближайшая неделя':
+        resp = get_deadlines('week')
+        bot.send_message(message.chat.id, resp, reply_markup=user_markup)
+    else:
+        msg = bot.send_message(message.chat.id, 'Я не могу показать дедлайны. Период введён неправильно.')
+        bot.register_next_step_handler(msg, handle_deadlines)
+
+
 def handle_mark(message):
     if message.text.strip() in ('1', '2', '3', '4', '5'):
         review['mark'] = message.text.strip()
@@ -142,6 +170,11 @@ def handle_review(message):
     review['review'] = message.text
     reviews.loc[len(reviews.index)] = [review['mark'], review['review']]
     reviews.to_csv('reviews.csv', sep=';', index=False)
+
+
+# @atexit.register
+# def bot_goodbye():
+#     bot.send_message(user_info['user_id'], 'Отключаюсь... Не теряйте!', reply_markup=user_markup)
 
 
 bot.polling(none_stop=True)
