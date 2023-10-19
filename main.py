@@ -3,7 +3,7 @@ import pandas as pd
 import telebot
 
 from bot_functions import authorize_user, get_deadlines, read_user_info, register_user, show_timetable
-from fipl_data import formulas, materials, minors, users, reviews, students, timetable
+from fipl_data import faq, formulas, materials, minors, users, reviews, students, timetable
 
 bot = telebot.TeleBot('6687870375:AAETInBz2DPYABkopwZbvZF0WEPLfxwHzg8')
 
@@ -16,9 +16,10 @@ user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
 user_markup.row('Расписание', 'Учебные материалы')
 user_markup.row('Майноры', 'Формулы оценки')
 user_markup.row('Дедлайны', 'Оценить бота')
+user_markup.row('Решение проблем и поддержка')
 
 
-@bot.message_handler(commands=['start'])
+@bot.message_handler(commands=['start', 'reset'])
 def handle_start(message):
     msg = bot.send_message(message.chat.id, '''Привет! Это ФиПЛ-бот.
 Для начала работы введи свои ФИО, пожалуйста.''')
@@ -89,8 +90,13 @@ def handle_options(message):
                                reply_markup=ev_markup)
         bot.register_next_step_handler(msg, handle_mark)
 
-    elif response == '/start':
-        handle_start(message)
+    elif response == 'решение проблем и поддержка':
+        msg = bot.send_message(message.chat.id, faq)
+        bot.register_next_step_handler(msg, handle_options)
+
+    elif response == '/start' or response == '/reset':
+        msg = bot.send_message(message.chat.id, 'Введи ФИО, пожалуйста.')
+        bot.register_next_step_handler(msg, handle_name)
 
     else:
         msg = bot.send_message(message.chat.id, 'Я не понимаю твой запрос, попробуй ещё раз.')
@@ -99,13 +105,19 @@ def handle_options(message):
 
 def handle_timetable(message):
     if message.text.lower().strip() == 'день':
-        msg = bot.send_message(message.chat.id, 'Какой день недели тебе нужен?')
+        week_markup = telebot.types.ReplyKeyboardMarkup(True, True)
+        week_markup.row('Понедельник', 'Вторник')
+        week_markup.row('Среда', 'Четверг')
+        week_markup.row('Пятница', 'Суббота')
+        msg = bot.send_message(message.chat.id, 'Какой день недели тебе нужен?', reply_markup=week_markup)
         bot.register_next_step_handler(msg, handle_time_day)
     elif message.text.lower().strip() == 'неделя':
         resp = ''
         for day in days:
             resp += show_timetable(timetable, user_info, day)
         bot.send_message(message.chat.id, resp, reply_markup=user_markup)
+    elif message.text.lower().strip() == '/menu':
+        handle_options(message)
     else:
         msg = bot.send_message(message.chat.id, 'Я не могу показать расписание. Период введён неправильно.')
         bot.register_next_step_handler(msg, handle_timetable)
@@ -116,6 +128,8 @@ def handle_time_day(message):
     if day in days:
         resp = show_timetable(timetable, user_info, day)
         bot.send_message(message.chat.id, resp, reply_markup=user_markup)
+    elif message.text.lower().strip() == '/menu':
+        handle_options(message)
     else:
         msg = bot.send_message(message.chat.id, 'Я не могу показать расписание на этот день.')
         bot.register_next_step_handler(msg, handle_time_day)
@@ -126,6 +140,8 @@ def handle_materials(message):
         mats = materials[materials['Дисциплина'].str.lower() == message.text.lower().strip()][
             'Ссылка на материалы'].squeeze()
         bot.send_message(message.chat.id, f'Вот ссылка:\n{mats}', reply_markup=user_markup)
+    elif message.text.lower().strip() == '/menu':
+        handle_options(message)
     else:
         msg = bot.send_message(message.chat.id, 'Таких материалов у меня нет.')
         bot.register_next_step_handler(msg, handle_materials)
