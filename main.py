@@ -98,6 +98,10 @@ def handle_options(message):
         msg = bot.send_message(message.chat.id, 'Введи ФИО, пожалуйста.')
         bot.register_next_step_handler(msg, handle_name)
 
+    elif message.text.lower().strip() == '/menu':
+        msg = bot.send_message(message.chat.id, 'Какая информация тебе нужна?', reply_markup=user_markup)
+        bot.register_next_step_handler(msg, handle_options)
+
     else:
         msg = bot.send_message(message.chat.id, 'Я не понимаю твой запрос, попробуй ещё раз.')
         bot.register_next_step_handler(msg, handle_options)
@@ -117,7 +121,8 @@ def handle_timetable(message):
             resp += show_timetable(timetable, user_info, day)
         bot.send_message(message.chat.id, resp, reply_markup=user_markup)
     elif message.text.lower().strip() == '/menu':
-        handle_options(message)
+        msg = bot.send_message(message.chat.id, 'Какая информация тебе нужна?', reply_markup=user_markup)
+        bot.register_next_step_handler(msg, handle_options)
     else:
         msg = bot.send_message(message.chat.id, 'Я не могу показать расписание. Период введён неправильно.')
         bot.register_next_step_handler(msg, handle_timetable)
@@ -129,7 +134,8 @@ def handle_time_day(message):
         resp = show_timetable(timetable, user_info, day)
         bot.send_message(message.chat.id, resp, reply_markup=user_markup)
     elif message.text.lower().strip() == '/menu':
-        handle_options(message)
+        msg = bot.send_message(message.chat.id, 'Какая информация тебе нужна?', reply_markup=user_markup)
+        bot.register_next_step_handler(msg, handle_options)
     else:
         msg = bot.send_message(message.chat.id, 'Я не могу показать расписание на этот день.')
         bot.register_next_step_handler(msg, handle_time_day)
@@ -141,7 +147,8 @@ def handle_materials(message):
             'Ссылка на материалы'].squeeze()
         bot.send_message(message.chat.id, f'Вот ссылка:\n{mats}', reply_markup=user_markup)
     elif message.text.lower().strip() == '/menu':
-        handle_options(message)
+        msg = bot.send_message(message.chat.id, 'Какая информация тебе нужна?', reply_markup=user_markup)
+        bot.register_next_step_handler(msg, handle_options)
     else:
         msg = bot.send_message(message.chat.id, 'Таких материалов у меня нет.')
         bot.register_next_step_handler(msg, handle_materials)
@@ -152,6 +159,9 @@ def handle_formulas(message):
         form = formulas[formulas['Дисциплины'].str.lower() == message.text.lower().strip()][
             'Формулы оценивания'].squeeze()
         bot.send_message(message.chat.id, f'Вот формула:\n{form}', reply_markup=user_markup)
+    elif message.text.lower().strip() == '/menu':
+        msg = bot.send_message(message.chat.id, 'Какая информация тебе нужна?', reply_markup=user_markup)
+        bot.register_next_step_handler(msg, handle_options)
     else:
         msg = bot.send_message(message.chat.id, 'Такой формулы у меня нет.')
         bot.register_next_step_handler(msg, handle_formulas)
@@ -164,6 +174,9 @@ def handle_deadlines(message):
     elif message.text.lower().strip() == 'ближайшая неделя':
         resp = get_deadlines('week')
         bot.send_message(message.chat.id, resp, reply_markup=user_markup)
+    elif message.text.lower().strip() == '/menu':
+        msg = bot.send_message(message.chat.id, 'Какая информация тебе нужна?', reply_markup=user_markup)
+        bot.register_next_step_handler(msg, handle_options)
     else:
         msg = bot.send_message(message.chat.id, 'Я не могу показать дедлайны. Период введён неправильно.')
         bot.register_next_step_handler(msg, handle_deadlines)
@@ -175,17 +188,24 @@ def handle_mark(message):
         msg = bot.send_message(message.chat.id, '''Спасибо за оценку!
 Пожалуйста, напиши отзыв о работе бота.''')
         bot.register_next_step_handler(msg, handle_review)
+    elif message.text.lower().strip() == '/menu':
+        msg = bot.send_message(message.chat.id, 'Какая информация тебе нужна?', reply_markup=user_markup)
+        bot.register_next_step_handler(msg, handle_options)
     else:
         msg = bot.send_message(message.chat.id, 'Эта оценка находится вне шкалы.')
         bot.register_next_step_handler(msg, handle_mark)
 
 
 def handle_review(message):
-    bot.send_message(message.chat.id, '''Спасибо за отзыв!
+    if message.text.lower().strip() == '/menu':
+        msg = bot.send_message(message.chat.id, 'Какая информация тебе нужна?', reply_markup=user_markup)
+        bot.register_next_step_handler(msg, handle_options)
+    else:
+        bot.send_message(message.chat.id, '''Спасибо за отзыв!
 Команда ФиПЛ-бота учтёт твои пожелания в будущем.''', reply_markup=user_markup)
-    review['review'] = message.text
-    reviews.loc[len(reviews.index)] = [review['mark'], review['review']]
-    reviews.to_csv('reviews.csv', sep=';', index=False)
+        review['review'] = message.text
+        reviews.loc[len(reviews.index)] = [review['mark'], review['review']]
+        reviews.to_csv('reviews.csv', sep=';', index=False)
 
 
 # @atexit.register
